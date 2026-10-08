@@ -1,0 +1,22 @@
+{
+  "name": "finlect",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tarun-2605/finlect.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tarun-2605/finlect/issues"
+  },
+  "homepage": "https://github.com/tarun-2605/finlect#readme"
+}
