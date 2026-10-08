@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finlect</title>
+<style>  /* ---- Moving background ---- */
+  .bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; animation: drift 18s ease-in-out infinite alternate; }
+  .b1 { width: 380px; height: 380px; background: #35b3a6; top: -80px; left: -100px; }
+  .b2 { width: 320px; height: 320px; background: #7ee0a4; bottom: -60px; right: -80px; animation-duration: 22s; }
+  .b3 { width: 260px; height: 260px; background: #ffd27a; top: 40%; left: 55%; animation-duration: 26s; }
+  @keyframes drift {
+    0%   { transform: translate(0, 0) scale(1); }
+    50%  { transform: translate(60px, -40px) scale(1.15); }
+    100% { transform: translate(-50px, 50px) scale(.95); }
+  }
+  .chartline { position: absolute; bottom: 0; left: 0; width: 100%; height: 40%; opacity: .28; }
+  .chartline path { fill: none; stroke: #1f6f78; stroke-width: 3; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 7s ease-in-out infinite alternate; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  /* ---- Button hover effects ---- */
+  button:not(.back):not(.linkbtn) { position: relative; overflow: hidden; transition: transform .2s, box-shadow .2s, filter .2s; }
+  button:not(.back):not(.linkbtn):hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(15,61,76,.28); filter: brightness(1.08); }
+  button:not(.back):not(.linkbtn):active { transform: translateY(0) scale(.97); }
+  .buybtn:hover { box-shadow: 0 8px 22px rgba(46,158,91,.55) !important; }
+  .sellbtn:hover { box-shadow: 0 8px 22px rgba(214,69,69,.55) !important; }
+  button:not(.back):not(.linkbtn)::after { content: ''; position: absolute; top: 0; left: -75%; width: 50%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent); transform: skewX(-20deg); }
+  button:not(.back):not(.linkbtn):hover::after { left: 130%; transition: left .6s; }
+  .back:hover, .linkbtn:hover { text-decoration: underline; }
+
+  /* ---- Stock rows ---- */
+  .stock { transition: transform .2s, box-shadow .2s, background .2s; }
+  .stock:hover { transform: translateX(6px); background: #eaf7f6; box-shadow: 0 4px 12px rgba(15,61,76,.12); }
+
+  @media (prefers-reduced-motion: reduce) { .blob, .chartline path { animation: none; } }
+  body { font-family: Arial, sans-serif; background: linear-gradient(#dff1f0, #f4f3ef 60%); color: #0f3d4c; margin: 0; padding: 20px; }
+  .wrap { max-width: 440px; margin: 0 auto; }
+  .logo { display: block; width: 200px; margin: 0 auto 6px; mix-blend-mode: multiply; }
+  .card { background: #fff; padding: 18px; border-radius: 16px; box-shadow: 0 4px 14px rgba(15,61,76,.10); margin-top: 16px; }
+  .balance { background: linear-gradient(135deg, #1f6f78, #35b3a6); color: #fff; }
+  .balance h1 { margin: 4px 0; }
+  .balance p { margin: 8px 0 0; opacity: .92; }
+  h3 { margin: 0 0 6px; }
+  input { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; }
+  button { padding: 12px; font-size: 16px; border-radius: 10px; border: none; color: #fff; background: #1f6f78; cursor: pointer; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-top: 6px; }
+  .linkbtn { background: none; color: #1f6f78; padding: 0; font-size: 14px; font-weight: bold; }
+  .stock { display: flex; align-items: center; gap: 12px; padding: 12px; margin-top: 10px; border-radius: 14px; background: #f7fbfb; border-left: 6px solid; cursor: pointer; }
+  .stock:active { transform: scale(.98); }
+  .badge { width: 46px; height: 46px; border-radius: 50%; color: #fff; font-weight: bold; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .badge.big { width: 58px; height: 58px; font-size: 14px; }
+  .info { flex: 1; }
+  .info small { color: #6b7f86; }
+  .right { text-align: right; }
+  .up { color: #2e9e5b; font-weight: bold; }
+  .down { color: #d64545; font-weight: bold; }
+  .back { background: none; color: #1f6f78; padding: 0 0 10px; font-weight: bold; }
+  .head { display: flex; align-items: center; gap: 14px; }
+  .chip { display: inline-block; color: #fff; font-size: 12px; padding: 3px 10px; border-radius: 20px; margin-top: 4px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+  .row button { flex: 1; }
+  #qty { font-size: 24px; font-weight: bold; min-width: 60px; text-align: center; }
+  .trade { display: flex; gap: 10px; margin-top: 10px; }
+  .trade button { flex: 1; padding: 15px; font-weight: bold; font-size: 18px; }
+  .buybtn { background: linear-gradient(135deg, #2e9e5b, #52c47a); }
+  .sellbtn { background: linear-gradient(135deg, #d64545, #ef7a6b); }
+  .review { margin-top: 16px; padding: 16px; border-radius: 14px; border-left: 8px solid; }
+  .score { font-size: 54px; font-weight: bold; margin: 0; line-height: 1; }
+  .headline { font-size: 20px; font-weight: bold; margin: 6px 0 4px; }
+  .tag { font-weight: bold; margin: 14px 0 2px; }
+  .note { margin: 8px 0 0; line-height: 1.45; padding-left: 10px; border-left: 3px solid; }
+  .bar { height: 8px; background: #e6ecee; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+  .bar div { height: 8px; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; font-weight: bold; color: #1f6f78; }
+  .fine { font-size: 12px; color: #6b7f86; margin: 14px 0 0; line-height: 1.4; }
+</style>
+</head>
+<body><div class="bg">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <svg class="chartline" viewBox="0 0 800 200" preserveAspectRatio="none">
+    <path pathLength="1" d="M0,160 L80,140 L160,150 L240,100 L320,120 L400,70 L480,90 L560,40 L640,60 L720,20 L800,30"/>
+  </svg>
+</div>
+<div class="wrap">
+
+  <img class="logo" src="logo.jpeg" alt="Finlect logo">
+
+  <!-- SIGN UP / LOG IN -->
+  <div id="auth" class="card" style="display:none">
+    <h3 id="authTitle">Create your account</h3>
+    <p style="margin:0;color:#6b7f86">Start with ₹10,00,000 of virtual money and learn by doing.</p>
+    <input id="aName" placeholder="Your name">
+    <input id="aEmail" type="email" placeholder="Email">
+    <input id="aPass" type="password" placeholder="Password (at least 8 characters)" onkeydown="if(event.key==='Enter')submitAuth()">
+    <button id="aBtn" class="buybtn" style="width:100%;margin-top:14px;font-weight:bold" onclick="submitAuth()">Sign up</button>
+    <p id="aMsg" style="color:#d64545;font-weight:bold;margin:10px 0 0"></p>
+    <p style="text-align:center;margin:12px 0 0"><a href="#" id="aSwitch" onclick="toggleAuth(); return false;">Already have an account? Log in</a></p>
+  </div>
+
+  <!-- THE APP (only visible when logged in) -->
+  <div id="app" style="display:none">
+
+    <div class="topbar">
+      <span id="hello"></span>
+      <button class="linkbtn" onclick="logout()">Log out</button>
+    </div>
+
+    <div class="card balance">
+      <small>Cash balance</small>
+      <h1 id="balance">₹10,00,000</h1>
+      <small>Portfolio value: <b id="pvalue">₹10,00,000</b></small>
+      <p id="holdings">No stocks yet. Pick one below to start.</p>
+    </div>
+
+    <!-- HOME VIEW -->
+    <div id="home" class="card">
+      <h3>Markets today</h3>
+      <div id="list"></div>
+      <p style="color:#6b7f86;font-size:13px">Live NSE prices via Yahoo Finance. Prices may be delayed. Your money is virtual, and this is for learning, not investment advice.</p>
+    </div>
+
+    <!-- COMPANY VIEW -->
+    <div id="detail" class="card" style="display:none">
+      <button class="back" onclick="goHome()">← Back</button>
+      <div class="head">
+        <div class="badge big" id="dBadge"></div>
+        <div>
+          <h2 id="dName" style="margin:0"></h2>
+          <span class="chip" id="dSector"></span>
+        </div>
+      </div>
+      <p id="dAbout" style="line-height:1.4"></p>
+      <h1 id="dPrice" style="margin:8px 0 0"></h1>
+      <div id="dChange"></div>
+      <svg id="chart" viewBox="0 0 300 140" style="width:100%;margin-top:8px"></svg>
+      <small style="color:#6b7f86">Last month, daily closing prices</small>
+
+      <p id="owned" style="font-weight:bold;margin:14px 0 0"></p>
+
+      <div class="row">
+        <button onclick="change(-1)">−</button>
+        <span id="qty">1</span>
+        <button onclick="change(1)">+</button>
+        <button onclick="change(10)">+10</button>
+      </div>
+      <p id="total" style="text-align:center;font-weight:bold"></p>
+
+      <div class="trade">
+        <button class="buybtn" onclick="buy()">Buy</button>
+        <button class="sellbtn" onclick="sell()">Sell</button>
+      </div>
+      <div id="result"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const stocks = [
+    { name: 'Reliance',      badge: 'R',    color: '#1f6f78', sector: 'Energy & Retail', about: 'Oil and gas, retail stores and Jio, all under one roof.' },
+    { name: 'TCS',           badge: 'TCS',  color: '#5b3fd0', sector: 'IT Services',     about: "One of India's biggest IT companies, working for clients all over the world." },
+    { name: 'Infosys',       badge: 'INFY', color: '#0a7abf', sector: 'IT Services',     about: 'Another IT giant, and one of the main rivals to TCS.' },
+    { name: 'HDFC Bank',     badge: 'HDFC', color: '#d64545', sector: 'Banking',         about: "One of India's largest private banks." },
+    { name: 'ITC',           badge: 'ITC',  color: '#e08a1e', sector: 'FMCG',            about: 'Makes cigarettes and everyday products like snacks and notebooks.' },
+    { name: 'Bharti Airtel', badge: 'BA',   color: '#e0182d', sector: 'Telecom',         about: "One of India's biggest mobile and broadband network companies." }
+  ];
+
+  let balance = 1000000;
+  let holdings = {};      // name -> { qty, avg }
+  let trades = [];        // trade history, used to spot overtrading
+  let selected = null;
+  let qty = 1;
+  let authMode = 'signup';
+
+  const rupees = n => '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  const chgText = c => (c >= 0 ? '▲ +' : '▼ ') + c.toFixed(1) + '%';
+  const round2 = n => Math.round(n * 100) / 100;
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const n0 = x => x.toFixed(0);
+  const n1 = x => x.toFixed(1);
+
+  // ---------- Accounts ----------
+  function showAuth() {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('auth').style.display = 'block';
+  }
+
+  function toggleAuth() {
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    const signup = authMode === 'signup';
+    document.getElementById('authTitle').textContent = signup ? 'Create your account' : 'Welcome back';
+    document.getElementById('aName').style.display = signup ? 'block' : 'none';
+    document.getElementById('aBtn').textContent = signup ? 'Sign up' : 'Log in';
+    document.getElementById('aSwitch').textContent = signup ? 'Already have an account? Log in' : 'New here? Create an account';
+    document.getElementById('aMsg').textContent = '';
+  }
+
+  async function submitAuth() {
+    const msg = document.getElementById('aMsg');
+    msg.textContent = '';
+    const body = {
+      email: document.getElementById('aEmail').value,
+      password: document.getElementById('aPass').value
+    };
+    if (authMode === 'signup') body.name = document.getElementById('aName').value;
+    try {
+      const res = await fetch('/api/' + authMode, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) { msg.textContent = data.error; return; }
+      document.getElementById('aPass').value = '';
+      enterApp(data);
+    } catch (e) {
+      msg.textContent = 'Could not reach the server. Is it running?';
+    }
+  }
+
+  async function enterApp(user) {
+    balance = user.state.balance;
+    holdings = user.state.holdings;
+    trades = user.state.trades;
+    document.getElementById('hello').textContent = 'Hi, ' + user.name;
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('detail').style.display = 'none';
+    document.getElementById('home').style.display = 'block';
+    updatePortfolio();
+    await loadPrices();
+    updatePortfolio();
+  }
+
+  async function logout() {
+    try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+    balance = 1000000; holdings = {}; trades = []; selected = null;
+    document.getElementById('result').innerHTML = '';
+    showAuth();
+  }
+
+  // Saves this person's progress on the server after every trade
+  function saveState() {
+    fetch('/api/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ balance, holdings, trades })
+    }).then(r => { if (r.status === 401) showAuth(); }).catch(() => {});
+  }
+
+  async function init() {
+    try {
+      const res = await fetch('/api/me');
+      if (res.ok) { enterApp(await res.json()); return; }
+    } catch (e) {}
+    showAuth();
+  }
+
+  // ---------- Real market data ----------
+  async function loadPrices() {
+    const list = document.getElementById('list');
+    list.innerHTML = '<p>Loading live prices...</p>';
+    try {
+      const res = await fetch('/api/stocks');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      data.forEach(d => {
+        const s = stocks.find(x => x.name === d.name);
+        s.price = d.price;
+        s.hist = d.hist;
+        s.chg = (d.hist[d.hist.length - 1] / d.hist[0] - 1) * 100;
+        computeStats(s);
+      });
+      renderHome();
+    } catch (e) {
+      list.innerHTML = '<p style="color:#d64545">Could not load live prices. Is the server running? (' + e.message + ')</p>';
+    }
+  }
+
+  // Numbers the scoring engine uses, worked out from real price history
+  function computeStats(s) {
+    const h = s.hist;
+    s.min = Math.min(...h);
+    s.max = Math.max(...h);
+    s.rp = Math.min(1, Math.max(0, (s.price - s.min) / ((s.max - s.min) || 1)));   // 0 = monthly low, 1 = monthly high
+    s.c5 = h.length > 5 ? (s.price / h[h.length - 6] - 1) * 100 : 0;                // change over last 5 trading days
+    const last20 = h.slice(-20);
+    s.avg20 = last20.reduce((a, b) => a + b, 0) / last20.length;
+    const rets = [];
+    for (let i = 1; i < h.length; i++) rets.push((h[i] / h[i - 1] - 1) * 100);
+    const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+    s.vol = Math.sqrt(rets.reduce((a, r) => a + (r - mean) * (r - mean), 0) / rets.length);  // typical daily swing in %
+  }
+
+  // ---------- Screens ----------
+  function renderHome() {
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+    stocks.forEach((s, i) => {
+      const own = holdings[s.name] ? ` · you own ${holdings[s.name].qty}` : '';
+      const row = document.createElement('div');
+      row.className = 'stock';
+      row.style.borderLeftColor = s.color;
+      row.innerHTML = `
+        <div class="badge" style="background:${s.color}">${s.badge}</div>
+        <div class="info"><b>${s.name}</b><br><small>${s.sector}${own}</small></div>
+        <div class="right"><b>${rupees(s.price)}</b><br><span class="${s.chg >= 0 ? 'up' : 'down'}">${chgText(s.chg)}</span></div>`;
+      row.onclick = () => openStock(i);
+      list.appendChild(row);
+    });
+  }
+
+  function drawChart(s) {
+    const w = 300, h = 140, pad = 10;
+    const range = (s.max - s.min) || 1;
+    const pts = s.hist.map((v, i) => {
+      const x = i * w / (s.hist.length - 1);
+      const y = h - pad - (v - s.min) / range * (h - 2 * pad);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    const col = s.chg >= 0 ? '#2e9e5b' : '#d64545';
+    document.getElementById('chart').innerHTML = `
+      <defs>
+        <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${col}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="${col}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="M0,${h} L${pts.join(' L')} L${w},${h} Z" fill="url(#fade)"/>
+      <polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+
+  function openStock(i) {
+    selected = stocks[i];
+    qty = 1;
+    document.getElementById('home').style.display = 'none';
+    document.getElementById('detail').style.display = 'block';
+    document.getElementById('dBadge').textContent = selected.badge;
+    document.getElementById('dBadge').style.background = selected.color;
+    document.getElementById('dName').textContent = selected.name;
+    document.getElementById('dSector').textContent = selected.sector;
+    document.getElementById('dSector').style.background = selected.color;
+    document.getElementById('dAbout').textContent = selected.about;
+    document.getElementById('dPrice').textContent = rupees(selected.price);
+    document.getElementById('dChange').innerHTML =
+      `<span class="${selected.chg >= 0 ? 'up' : 'down'}">${chgText(selected.chg)}</span> <small style="color:#6b7f86">over the last month</small>`;
+    document.getElementById('result').innerHTML = '';
+    drawChart(selected);
+    updateOwned();
+    change(0);
+    window.scrollTo(0, 0);
+  }
+
+  function goHome() {
+    document.getElementById('detail').style.display = 'none';
+    document.getElementById('home').style.display = 'block';
+    renderHome();
+    window.scrollTo(0, 0);
+  }
+
+  function change(n) {
+    qty = Math.max(1, qty + n);
+    document.getElementById('qty').textContent = qty;
+    document.getElementById('total').textContent = 'Value: ' + rupees(qty * selected.price);
+  }
+
+  function updateOwned() {
+    const h = holdings[selected.name];
+    const el = document.getElementById('owned');
+    if (!h) { el.textContent = "You don't own any yet."; return; }
+    const pnl = (selected.price / h.avg - 1) * 100;
+    el.innerHTML = `You own ${h.qty} shares, bought at an average of ${rupees(h.avg)} <span class="${pnl >= 0 ? 'up' : 'down'}">(${pnl >= 0 ? '+' : ''}${n1(pnl)}%)</span>`;
+  }
+
+  function updatePortfolio() {
+    document.getElementById('balance').textContent = rupees(balance);
+    document.getElementById('pvalue').textContent = rupees(totalValue());
+    const names = Object.keys(holdings);
+    document.getElementById('holdings').textContent = names.length
+      ? names.map(n => `${n}: ${holdings[n].qty} shares`).join('   •   ')
+      : 'No stocks yet. Pick one below to start.';
+  }
+
+  // ---------- Portfolio maths ----------
+  function totalValue() {
+    let t = balance;
+    stocks.forEach(s => { if (holdings[s.name]) t += holdings[s.name].qty * (s.price || 0); });
+    return t;
+  }
+
+  function sectorPct(sector) {
+    let v = 0;
+    stocks.forEach(s => { if (s.sector === sector && holdings[s.name]) v += holdings[s.name].qty * s.price; });
+    return v / totalValue() * 100;
+  }
+
+  function recentTrades() {
+    const now = Date.now();
+    return trades.filter(t => now - t.t < 5 * 60 * 1000).length;
+  }
+
+  function say(msg) {
+    document.getElementById('result').innerHTML = `<p style="color:#d64545;font-weight:bold">${msg}</p>`;
+  }
+
+  // ---------- BUY ----------
+  function buy() {
+    const s = selected;
+    const cost = s.price * qty;
+    if (cost > balance) { say('You don\'t have enough virtual cash for that. Try fewer shares.'); return; }
+
+    const before = holdings[s.name];
+    const oldAvg = before ? before.avg : 0;
+    const avgDown = before && s.price < before.avg * 0.95;
+
+    balance = round2(balance - cost);
+    if (before) { before.avg = (before.avg * before.qty + cost) / (before.qty + qty); before.qty += qty; }
+    else holdings[s.name] = { qty: qty, avg: s.price };
+    trades.push({ t: Date.now(), name: s.name, side: 'buy' });
+
+    const total = totalValue();
+    const w = holdings[s.name].qty * s.price / total * 100;
+    const sw = sectorPct(s.sector);
+    const cash = balance / total * 100;
+    const recent = recentTrades();
+    const same = stocks.filter(x => x.sector === s.sector && x.name !== s.name && holdings[x.name]).map(x => x.name);
+    const sameNote = same.length ? ` (${same.join(' and ')} ${same.length > 1 ? 'are' : 'is'} in the same sector, so they tend to move together)` : '';
+
+    const factors = [];
+    let p, t;
+
+    // 1. Position size
+    if (w <= 10)      { p = 20; t = `Only ${n0(w)}% of your money is in ${s.name}. Even a rough week for it won't hurt much.`; }
+    else if (w <= 20) { p = 15; t = `${n0(w)}% of your money is in ${s.name}. That's a comfortable size.`; }
+    else if (w <= 35) { p = 9;  t = `${n0(w)}% of your money is now in ${s.name}. That's on the heavy side for a single company.`; }
+    else if (w <= 50) { p = 4;  t = `${n0(w)}% of everything you have is riding on ${s.name}. If it drops 10%, your whole portfolio loses about ${n1(w / 10)}%.`; }
+    else              { p = 1;  t = `More than half your money is in ${s.name}. That's one big bet on a single company.`; }
+    factors.push({ label: 'Position size', pts: p, max: 20, text: t });
+
+    // 2. Sector spread
+    if (sw <= 25)      { p = 15; t = `Only ${n0(sw)}% of your money is in ${s.sector}, so you're nicely spread across sectors.`; }
+    else if (sw <= 40) { p = 11; t = `${n0(sw)}% of your money is in ${s.sector}${sameNote}. Okay for now, but keep an eye on it.`; }
+    else if (sw <= 60) { p = 6;  t = `${n0(sw)}% of your money is in ${s.sector}${sameNote}. If the whole sector has a bad month, you'll feel it.`; }
+    else               { p = 2;  t = `${n0(sw)}% of your money is in just ${s.sector}${sameNote}. One sector is deciding most of your results.`; }
+    factors.push({ label: 'Sector spread', pts: p, max: 15, text: t });
+
+    // 3. Cash cushion
+    if (cash >= 50)      { p = 15; t = `You still have ${n0(cash)}% in cash, so you're free to act on the next good chance.`; }
+    else if (cash >= 25) { p = 11; t = `${n0(cash)}% of your money is still in cash. A healthy cushion.`; }
+    else if (cash >= 10) { p = 6;  t = `Only ${n0(cash)}% is left in cash. You're getting close to running out of room to move.`; }
+    else                 { p = 1;  t = `You're almost fully invested, with just ${n0(cash)}% in cash. If a real bargain shows up, you can't take it.`; }
+    factors.push({ label: 'Cash cushion', pts: p, max: 15, text: t });
+
+    // 4. Entry timing
+    p = 20;
+    if (s.rp > 0.9) p -= 7; else if (s.rp > 0.75) p -= 3;
+    if (s.c5 > 8) p -= 8; else if (s.c5 > 5) p -= 4; else if (s.c5 < -6) p -= 3;
+    p = Math.max(3, p);
+    if (s.c5 > 5)         t = `${s.name} has already jumped ${n1(s.c5)}% in the last 5 trading days. Buying after a run like that is called chasing, and it's where a lot of beginners get burned.`;
+    else if (s.c5 < -6)   t = `${s.name} dropped ${n1(-s.c5)}% over the last 5 trading days. Buying into a fall can work, but find out why it's falling first.`;
+    else if (s.rp > 0.75) t = `It's trading near the top of its last month's range, so you're paying a high price compared with recent weeks.`;
+    else if (s.rp < 0.25) t = `It's near the low end of its last month's range. Cheap compared with recent weeks, but check there's no bad news behind it.`;
+    else                  t = `It's sitting in the middle of its recent range, so you're not buying a spike or a crash.`;
+    factors.push({ label: 'Entry timing', pts: p, max: 20, text: t });
+
+    // 5. Trend
+    const dev = s.price / s.avg20 - 1;
+    const dp = Math.abs(dev * 100);
+    if (dev >= 0 && dev <= 0.05)        { p = 10; t = `It's ${n1(dp)}% above its 20-day average, so the trend is on your side without being stretched.`; }
+    else if (dev > 0.05 && dev <= 0.10) { p = 7;  t = `It's ${n1(dp)}% above its 20-day average, which is a bit stretched.`; }
+    else if (dev > 0.10)                { p = 4;  t = `It's ${n1(dp)}% above its 20-day average. Prices that stretch this far often cool off.`; }
+    else if (dev >= -0.05)              { p = 8;  t = `It's ${n1(dp)}% below its 20-day average. A mild dip, nothing dramatic.`; }
+    else if (dev > -0.10)               { p = 5;  t = `It's ${n1(dp)}% below its 20-day average and looking weak right now, so size your bet carefully.`; }
+    else                                { p = 3;  t = `It's ${n1(dp)}% below its 20-day average and falling hard. That's a risky moment to jump in.`; }
+    factors.push({ label: 'Trend', pts: p, max: 10, text: t });
+
+    // 6. Volatility fit
+    p = s.vol < 1.2 ? 10 : s.vol < 2 ? 8 : 6;
+    if (w > 25) p -= 3;
+    p = Math.max(2, p);
+    if (w > 25 && s.vol >= 1.2) t = `Its price typically swings about ${n1(s.vol)}% a day, and with ${n0(w)}% of your money in it, those swings will show up in your balance.`;
+    else if (s.vol < 1.2)       t = `It's a fairly calm stock, moving about ${n1(s.vol)}% on a typical day. That suits a beginner.`;
+    else if (s.vol < 2)         t = `It usually moves around ${n1(s.vol)}% a day. That's normal for a big company, just expect some bumpy days.`;
+    else                        t = `It swings about ${n1(s.vol)}% on a typical day, which is bumpy. Keep your position small.`;
+    factors.push({ label: 'Volatility fit', pts: p, max: 10, text: t });
+
+    // 7. Trading habits
+    p = 10;
+    if (recent >= 4) p = 2; else if (recent === 3) p = 6;
+    if (avgDown) p = Math.max(0, p - 4);
+    if (recent >= 4)       t = `That's trade number ${recent} in just a few minutes. Frequent trading racks up brokerage and tax in real life, and it's usually emotion talking.`;
+    else if (recent === 3) t = `Three trades in a few minutes is a lot. Slow down and plan the next one.`;
+    else if (avgDown)      t = `You're adding to ${s.name} even though it's below what you paid (about ${rupees(oldAvg)}). That's called averaging down. It can work, but only if you still believe in the company, not just to dodge a loss.`;
+    else                   t = `Nothing worrying about the way you're trading.`;
+    factors.push({ label: 'Trading habits', pts: p, max: 10, text: t });
+
+    showReview(factors);
+    updatePortfolio();
+    updateOwned();
+    saveState();
+  }
+
+  // ---------- SELL ----------
+  function sell() {
+    const s = selected;
+    const h = holdings[s.name];
+    if (!h) { say(`You don't own any ${s.name} yet.`); return; }
+    if (qty > h.qty) { say(`You only own ${h.qty} shares of ${s.name}.`); return; }
+
+    const wb = h.qty * s.price / totalValue() * 100;
+    const pnl = (s.price / h.avg - 1) * 100;
+    const profit = (s.price - h.avg) * qty;
+    const lastTrade = trades.slice().reverse().find(x => x.name === s.name);
+    const flip = lastTrade && lastTrade.side === 'buy' && Date.now() - lastTrade.t < 5 * 60 * 1000;
+
+    balance = round2(balance + s.price * qty);
+    h.qty -= qty;
+    if (h.qty === 0) delete holdings[s.name];
+    trades.push({ t: Date.now(), name: s.name, side: 'sell' });
+
+    const recent = recentTrades();
+    const cashAfter = balance / totalValue() * 100;
+
+    const factors = [];
+    let p, t;
+
+    // 1. Profit and loss discipline
+    if (pnl >= 10)       { p = 35; t = `You're selling ${s.name} at a ${n1(pnl)}% gain, about ${rupees(profit)} in profit. Locking in a solid gain is never a bad decision.`; }
+    else if (pnl >= 0)   { p = 28; t = `A small gain of ${n1(pnl)}% on ${s.name}. Fine, though in real life brokerage and tax would take a bite out of it.`; }
+    else if (pnl >= -5)  { p = 25; t = `You're closing ${s.name} at a ${n1(-pnl)}% loss. Cutting a small loss early is a habit the pros share.`; }
+    else if (pnl >= -10) { p = 18; t = `You're down ${n1(-pnl)}% on ${s.name}. It stings, but a loss this size is manageable.`; }
+    else                 { p = 10; t = `You're selling ${s.name} at a ${n1(-pnl)}% loss. Ask yourself whether you held on too long, or whether you're selling right at the bottom.`; }
+    factors.push({ label: 'Profit & loss discipline', pts: p, max: 35, text: t });
+
+    // 2. Timing
+    if (s.c5 <= -5 && pnl < 0) { p = 8;  t = `${s.name} dropped ${n1(-s.c5)}% in the last 5 trading days and you're selling at a loss. That looks like panic selling, and it locks in losses that sometimes recover.`; }
+    else if (s.rp >= 0.8)      { p = 25; t = `You're selling near the top of its last month's range. Good timing.`; }
+    else if (s.rp >= 0.4)      { p = 18; t = `You're selling in the middle of its recent range. Neither great nor bad timing.`; }
+    else                       { p = 12; t = `It's near the bottom of its last month's range, so you're selling when the price is low.`; }
+    factors.push({ label: 'Timing', pts: p, max: 25, text: t });
+
+    // 3. Portfolio balance
+    if (wb > 25)             { p = 20; t = `${s.name} was ${n0(wb)}% of your portfolio, so selling trims a heavy position. That's good housekeeping.`; }
+    else if (cashAfter > 90) { p = 10; t = `You're now almost entirely in cash (${n0(cashAfter)}%). Waiting is fine, but money that sits uninvested doesn't grow.`; }
+    else                     { p = 15; t = `Your portfolio stays reasonably balanced after this sale.`; }
+    factors.push({ label: 'Portfolio balance', pts: p, max: 20, text: t });
+
+    // 4. Trading habits
+    p = 20;
+    if (recent >= 4) p = 6; else if (recent === 3) p = 12;
+    if (flip) p = Math.max(0, p - 8);
+    if (flip)              t = `You bought ${s.name} only minutes ago and you're already selling. In real markets, short-term profits are taxed and brokerage adds up quickly, so quick flips rarely pay.`;
+    else if (recent >= 4)  t = `That's trade number ${recent} in just a few minutes. Frequent trading racks up costs in real life, and it's usually emotion talking.`;
+    else if (recent === 3) t = `Three trades in a few minutes is a lot. Slow down and plan the next one.`;
+    else                   t = `Nothing worrying about the way you're trading.`;
+    factors.push({ label: 'Trading habits', pts: p, max: 20, text: t });
+
+    showReview(factors);
+    updatePortfolio();
+    updateOwned();
+    saveState();
+  }
+
+  // ---------- The review ----------
+  function colorFor(r) {
+    return r >= 0.8 ? '#2e9e5b' : r >= 0.6 ? '#d9a400' : r >= 0.4 ? '#f08a24' : '#d64545';
+  }
+
+  function showReview(factors) {
+    const score = Math.round(factors.reduce((a, f) => a + f.pts, 0));
+    const color = colorFor(score / 100);
+    let headline;
+    if (score >= 80)      headline = pick(['Strong trade. This is how a calm investor plays it.', 'That was a well thought out move.']);
+    else if (score >= 60) headline = pick(['Decent trade, with a few things to tighten up.', 'Not bad. A couple of details could make it better.']);
+    else if (score >= 40) headline = pick(['Risky. Let me show you where.', 'This one has some real weak spots.']);
+    else                  headline = pick(['Whoa, slow down. This one worries me.', 'Rough one. Take a look at why.']);
+
+    const withR = factors.map(f => ({ ...f, r: f.pts / f.max }));
+    const good = withR.filter(f => f.r >= 0.7).sort((a, b) => b.r - a.r).slice(0, 2);
+    const bad  = withR.filter(f => f.r < 0.7).sort((a, b) => a.r - b.r).slice(0, 2);
+    const note = (f, col) => `<p class="note" style="border-color:${col}">${f.text}</p>`;
+    const bars = withR.map(f => `
+      <div style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;font-size:14px"><span>${f.label}</span><b>${f.pts}/${f.max}</b></div>
+        <div class="bar"><div style="width:${f.r * 100}%;background:${colorFor(f.r)}"></div></div>
+      </div>`).join('');
+
+    document.getElementById('result').innerHTML = `
+      <div class="review" style="border-color:${color}; background:${color}1f">
+        <p class="score" style="color:${color}">${score}<span style="font-size:22px">/100</span></p>
+        <p class="headline">${headline}</p>
+        ${good.length ? '<p class="tag">What went well</p>' + good.map(f => note(f, '#2e9e5b')).join('') : ''}
+        <p class="tag">${bad.length ? 'Watch out for' : 'Anything to flag?'}</p>
+        ${bad.length ? bad.map(f => note(f, '#f08a24')).join('') : '<p class="note" style="border-color:#2e9e5b">Nothing worrying here. Nice and clean.</p>'}
+        <details><summary>See the full breakdown</summary>${bars}</details>
+        <p class="fine">This score judges your decision, not the luck of the market. A good trade can still lose money, and a lucky one can still be a bad habit.</p>
+      </div>`;
+  }
+
+  init();
+</script>
+
+</body>
+</html>
